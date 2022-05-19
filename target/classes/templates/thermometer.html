@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Simple Thermometer</title>
+</head>
+<body>
+<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+<script src="http://code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+
+<script>
+
+    var setIn;
+    function stop() {
+        clearInterval(setIn);
+    }
+
+    function fnClear() {
+        console.log('clear history');
+
+        $("#message").empty();
+    }
+
+    function fnBoling(e) {
+        $("#threshold").val('100')
+        $('#freezing').prop("checked", false);
+    }
+
+    function fnFreezing(e) {
+        $("#threshold").val('0');
+        $('#boiling').prop("checked", false);
+    }
+
+    function fnIgnore(e) {
+        $('#onlyIncreasing').prop("checked", false);
+        $('#onlyDecreasing').prop("checked", false);
+    }
+
+    function fnOnlyIncreasing(e) {
+        $('#ignore').prop("checked", false);
+        $('#onlyDecreasing').prop("checked", false);
+    }
+
+
+    function fnOnlyDecreasing(e) {
+        $('#onlyIncreasing').prop("checked", false);
+        $('#ignore').prop("checked", false);
+    }
+
+
+
+
+
+    function start(testType) {
+        clearInterval(setIn);
+
+        var threshold = $("#threshold").val();
+        if(threshold == null || threshold == '') {
+            alert('Need to enter threshold!!!');
+            return;
+        }
+
+        var iscelsius = $('#iscelsius').val();
+
+
+
+        var ignore = 'N';
+        if ($('#ignore').is(':checked')) {
+            ignore = 'Y';
+        }
+
+        var onlyIncreasing = 'N';
+        if ($('#onlyIncreasing').is(':checked')) {
+            onlyIncreasing = 'Y';
+        }
+
+        var onlyDecreasing = 'N';
+        if ($('#onlyDecreasing').is(':checked')) {
+            onlyDecreasing = 'Y';
+        }
+
+
+        setIn=setInterval(function () {myTimer()}, 1000);
+
+        function myTimer() {
+            dataSend();
+        }
+
+        function dataSend() {
+            var messageDTO={
+                threshold:threshold,
+                testType:testType,
+                ignore:ignore,
+                onlyincreasing:onlyIncreasing,
+                onlydecreasing:onlyDecreasing,
+                iscelsius: iscelsius
+            };
+
+            $.ajax({
+                url: "/thermometer",
+                data: messageDTO,
+                type:"POST",
+            }).done(function (data) {
+                if(data.notification) {
+                    console.log('call notification');
+                    var today = new Date();
+
+                    var hours = ('0' + today.getHours()).slice(-2);
+                    var minutes = ('0' + today.getMinutes()).slice(-2);
+                    var seconds = ('0' + today.getSeconds()).slice(-2);
+
+                    var timeString = hours + ':' + minutes  + ':' + seconds;
+                    $("#message").append('threshold has been reached! ' + timeString  + '<br/>');
+                }
+
+                $("#celsius").html(data.celsius);
+                $("#fahrenheit").html(data.fahrenheit);
+            }).fail(function (jqXHR, textStatus) {
+                clearInterval(setIn);
+            });
+        }
+
+
+    }
+
+</script>
+
+
+
+
+
+<div class="jumbotron text-center">
+    <h1>Thermometer</h1>
+    <p>Please enter the threshold point to be notified.</p>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-4" style="background-color: gray; text-align: center;" >
+            <h3>current temperature</h3>
+            <span id="celsius"></span> °C<br/>
+            <span id="fahrenheit"></span> °F<br/>
+<!--            <span th:text="${thermometerInfo.celsius}" id="celsius"></span> °C<br/>-->
+<!--            <span th:text="${thermometerInfo.fahrenheit}" id="fahrenheit"></span> °F<br/>-->
+        </div>
+        <div class="col-sm-4">
+            <h3>Message</h3>
+            <div id="message"></div>
+            <h3>threshold</h3>
+            <input type="number" id="threshold" name="threshold" min="-100" max="100">
+            <select id="iscelsius">
+                <option selected value="Y">°C celsius</option>
+                <option value="N">°F fahrenheit</option>
+            </select>
+
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Y" id="freezing" onclick="fnFreezing(this);"/>
+                <label class="form-check-label" for="freezing">freezing</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Y" id="boiling" onclick="fnBoling(this);"/>
+                <label class="form-check-label" for="boiling">boiling</label>
+            </div>
+
+            <h3>options</h3>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Y" id="ignore" onclick="fnIgnore()"/>
+                <label class="form-check-label" for="ignore">ignore(ignore +/- 0.5C)</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Y" id="onlyIncreasing" onclick="fnOnlyIncreasing()"/>
+                <label class="form-check-label" for="onlyIncreasing">only increasing</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="Y" id="onlyDecreasing" onclick="fnOnlyDecreasing()"/>
+                <label class="form-check-label" for="onlyDecreasing">only decreasing</label>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <h3>TestMode</h3>
+            <button onclick="start('WINTER'); return false;">Winter(3°C ~ -3°C)</button>
+            <button onclick="start('SUMMER'); return false;">Summer(20°C ~ 25°C)</button>
+            <button onclick="start('IGNORE'); return false;">Ignore(1.5°C ~ -0.5°C)</button>
+            <button onclick="stop(); return false;">Stop</button>
+            <button onclick="fnClear(); return false;">Clear</button>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>
